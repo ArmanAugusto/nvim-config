@@ -1,6 +1,6 @@
 -- ~/.config/nvim/init.lua
 -- CachyOS / Arch-friendly Neovim config for:
--- C, C++, Python, Go, Rust, Packer(HCL), Ansible, Docker/Podman
+-- C, C++, Python, Go, Rust, Zig, Packer(HCL), Ansible, Docker/Podman
 --
 -- Neovim: v0.11+
 -- LSP: uses vim.lsp.config() + vim.lsp.enable() (no require("lspconfig") framework)
@@ -117,6 +117,7 @@ require("lazy").setup({
 					"python",
 					"go",
 					"rust",
+					"zig", -- ADD: Zig Treesitter
 					"lua",
 					"vim",
 					"vimdoc",
@@ -167,6 +168,7 @@ require("lazy").setup({
 					"dockerls",
 					"terraformls", -- also useful for Packer HCL templates
 					"bashls",
+					-- NOTE: Zig uses `zig lsp` (no Mason server needed)
 				},
 				automatic_installation = true,
 			})
@@ -260,6 +262,7 @@ require("lazy").setup({
 					python = { "black" },
 					go = { "gofmt" },
 					rust = { "rustfmt" },
+					zig = { "zigfmt" }, -- ADD: Zig formatting via Conform's zigfmt wrapper
 					lua = { "stylua" },
 					yaml = { "prettier" },
 					json = { "prettier" },
@@ -356,11 +359,28 @@ vim.lsp.config("dockerls", { capabilities = capabilities })
 vim.lsp.config("terraformls", { capabilities = capabilities })
 vim.lsp.config("bashls", { capabilities = capabilities })
 
+-- ADD: Zig LSP (built into zig: `zig lsp`)
+vim.lsp.config("zig", {
+	capabilities = capabilities,
+	cmd = { "zig", "lsp" },
+	filetypes = { "zig" },
+	-- Prefer project roots with build.zig; fallback to .git; else file dir.
+	root_dir = function(bufnr, _)
+		local fname = vim.api.nvim_buf_get_name(bufnr)
+		local root = vim.fs.root(fname, { "build.zig", ".git" })
+		if root then
+			return root
+		end
+		return vim.fs.dirname(fname)
+	end,
+})
+
 vim.lsp.enable({
 	"clangd",
 	"pyright",
 	"gopls",
 	"rust_analyzer",
+	"zig", -- ADD: enable Zig LSP
 	"ansiblels",
 	"yamlls",
 	"jsonls",
@@ -383,3 +403,4 @@ vim.diagnostic.config({
 ------------------------------------------------------------
 vim.keymap.set("n", "<leader>e", vim.diagnostic.open_float, { desc = "Line diagnostics" })
 vim.keymap.set("n", "<leader>q", vim.diagnostic.setloclist, { desc = "Diagnostics list" })
+
